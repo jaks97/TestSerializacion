@@ -13,6 +13,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <string.h>
+#include <arpa/inet.h>
 
 enum operaciones{
 	SELECT = 1,
@@ -70,18 +72,18 @@ struct struct_select recibir_select(int cliente){
 	printf("La key es %s\n", paquete.key);
 	free(buffer);
 
-	puts("Listo, recibi el paquete completo!");
+	puts("Listo, recibi el paquete completo!\n");
 
 	return paquete;
 }
 
 struct struct_insert recibir_insert(int cliente){
 	struct struct_insert paquete;
-	void* buffer;
+	void* buffer = NULL;
 
 	// Recibo tamanio del nombre de tabla
-	buffer = malloc(sizeof(u_int));
-	recv(cliente, buffer, sizeof(u_int), 0);
+	buffer = malloc(sizeof(paquete.tamanio_nombre));
+	recv(cliente, buffer, sizeof(paquete.tamanio_nombre), 0);
 	paquete.tamanio_nombre = *((u_int*)buffer);
 	printf("El nombre de tabla es de %d bytes\n", paquete.tamanio_nombre);
 	free(buffer);
@@ -120,7 +122,7 @@ struct struct_insert recibir_insert(int cliente){
 	printf("El valor es \"%s\"\n", paquete.valor);
 	free(buffer);
 
-	puts("Listo, recibi el paquete completo!");
+	puts("Listo, recibi el paquete completo!\n");
 
 	return paquete;
 }

@@ -13,6 +13,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <string.h>
+#include <arpa/inet.h>
 
 enum operaciones{
 	SELECT = 1,
@@ -30,6 +32,14 @@ struct struct_select{
 	char* key;
 };
 
+/*struct struct_insert{
+	u_int tamanio_nombre;
+	char* nombreTabla;
+	u_int tamanio_key;
+	char* key;
+	u_int tamanio_valor;
+	char* valor;
+};*/
 struct struct_insert{
 	u_int tamanio_nombre;
 	char* nombreTabla;
@@ -40,77 +50,64 @@ struct struct_insert{
 };
 
 void enviar_select(int cliente, struct struct_select paquete){
-	// Primero codigo de operacion
-	u_char* cod_op = malloc(sizeof(u_char));
-	*cod_op = SELECT;
-	send(cliente, cod_op, sizeof(u_char), 0);
-	free(cod_op);
-
+	// Primero envio codigo de operacion
+	u_char cod_op = SELECT;
+	send(cliente, &cod_op, sizeof(u_char), 0);
 
 	// Luego los datos
-	void* buffer;
+	size_t tamanio_paquete = sizeof(u_int)*2 + paquete.tamanio_key + paquete.tamanio_nombre; // Calculo el tamanio del paquete
+	void* buffer = malloc(tamanio_paquete); // Pido memoria para el tamanio del paquete completo que voy a enviar
 
-	// Primero tamanio del nombre de tabla
-	buffer = malloc(sizeof(paquete.tamanio_nombre));
-	*((u_int*)buffer) = paquete.tamanio_nombre;
-	send(cliente, buffer, sizeof(paquete.tamanio_nombre), 0);
-	free(buffer);
+	int posbuffer = 0; // Voy a usar esta variable para ir moviendome por el buffer
 
-	// Despues el nombre de la tabla
-	buffer = strdup(paquete.nombreTabla);
-	send(cliente, buffer, paquete.tamanio_nombre, 0);
-	free(buffer);
+	// Primero el nombre de la tabla
+	memcpy(buffer, &paquete.tamanio_nombre, sizeof(paquete.tamanio_nombre)); // En el comienzo del buffer copio el tamanio del nombre de la tabla
+	posbuffer += sizeof(paquete.tamanio_nombre); // Me corro 4 bytes del int
+	memcpy(buffer + posbuffer, paquete.nombreTabla, paquete.tamanio_nombre); // En la nueva posicion copio el nombre de la tabla
+	posbuffer += paquete.tamanio_nombre; // Me corro la longitud del string
 
-	// Despues la key
-	buffer = malloc(sizeof(paquete.tamanio_key));
-	*((u_int*)buffer) = paquete.tamanio_key;
-	send(cliente, buffer, sizeof(paquete.tamanio_key), 0);
-	free(buffer);
+	// Lo mismo para la clave
+	memcpy(buffer + posbuffer, &paquete.tamanio_key, sizeof(paquete.tamanio_key));
+	posbuffer += sizeof(paquete.tamanio_key);
+	memcpy(buffer + posbuffer, paquete.key, paquete.tamanio_key);
+	// Al pedo calcular el corrimiento ahora, no voy a enviar mas nada y ademas ya me ocupe todo el buffer
 
-	buffer = strdup(paquete.key);
-	send(cliente, buffer, paquete.tamanio_key, 0);
+	// Por ultimo envio el paquete y libero el buffer.
+	send(cliente, buffer, tamanio_paquete, 0);
 	free(buffer);
 }
 
 void enviar_insert(int cliente, struct struct_insert paquete){
-	// Primero codigo de operacion
-	u_char* cod_op = malloc(sizeof(u_char));
-	*cod_op = INSERT;
-	send(cliente, cod_op, sizeof(u_char), 0);
-	free(cod_op);
-
+	// Primero envio codigo de operacion
+	u_char cod_op = INSERT;
+	send(cliente, &cod_op, sizeof(u_char), 0);
 
 	// Luego los datos
-	void* buffer;
+	size_t tamanio_paquete = sizeof(u_int)*3 + paquete.tamanio_key + paquete.tamanio_nombre + paquete.tamanio_valor; // Calculo el tamanio del paquete
+	void* buffer = malloc(tamanio_paquete); // Pido memoria para el tamanio del paquete completo que voy a enviar
 
-	// Primero nombre de tabla (y su tamanio)
-	buffer = malloc(sizeof(paquete.tamanio_nombre));
-	*((u_int*)buffer) = paquete.tamanio_nombre;
-	send(cliente, buffer, sizeof(paquete.tamanio_nombre), 0);
-	free(buffer);
+	int posbuffer = 0; // Voy a usar esta variable para ir moviendome por el buffer
 
-	buffer = strdup(paquete.nombreTabla);
-	send(cliente, buffer, paquete.tamanio_nombre, 0);
-	free(buffer);
+	// Primero el nombre de la tabla
+	memcpy(buffer, &paquete.tamanio_nombre, sizeof(paquete.tamanio_nombre)); // En el comienzo del buffer copio el tamanio del nombre de la tabla
+	posbuffer += sizeof(paquete.tamanio_nombre); // Me corro 4 bytes del int
+	memcpy(buffer + posbuffer, paquete.nombreTabla, paquete.tamanio_nombre); // En la nueva posicion copio el nombre de la tabla
+	posbuffer += paquete.tamanio_nombre; // Me corro la longitud del string
 
-	// Despues la key
-	buffer = malloc(sizeof(paquete.tamanio_key));
-	*((u_int*)buffer) = paquete.tamanio_key;
-	send(cliente, buffer, sizeof(paquete.tamanio_key), 0);
-	free(buffer);
+	// Lo mismo para la clave
+	memcpy(buffer + posbuffer, &paquete.tamanio_key, sizeof(paquete.tamanio_key));
+	posbuffer += sizeof(paquete.tamanio_key);
+	memcpy(buffer + posbuffer, paquete.key, paquete.tamanio_key);
+	posbuffer += paquete.tamanio_key;
 
-	buffer = strdup(paquete.key);
-	send(cliente, buffer, paquete.tamanio_key, 0);
-	free(buffer);
+	// Lo mismo para el valor
+	memcpy(buffer + posbuffer, &paquete.tamanio_valor, sizeof(paquete.tamanio_valor));
+	posbuffer += sizeof(paquete.tamanio_valor);
+	memcpy(buffer + posbuffer, paquete.valor, paquete.tamanio_valor);
+	// Al pedo calcular el corrimiento ahora, no voy a enviar mas nada y ademas ya me ocupe todo el buffer
 
-	// Por ultimo el valor
-	buffer = malloc(sizeof(paquete.tamanio_valor));
-	*((u_int*)buffer) = paquete.tamanio_valor;
-	send(cliente, buffer, sizeof(paquete.tamanio_valor), 0);
-	free(buffer);
-
-	buffer = strdup(paquete.valor);
-	send(cliente, buffer, paquete.tamanio_valor, 0);
+	// Por ultimo envio el paquete y libero el buffer.
+	send(cliente, buffer, tamanio_paquete, 0);
 	free(buffer);
 }
 
@@ -131,12 +128,12 @@ int main(void) {
 
 	// Armo un INSERT TABLA1 KEY1 "ALGUN VALOR"
 	struct struct_insert paquete;
-	paquete.nombreTabla = "TABLA1";
-	paquete.tamanio_nombre = strlen(paquete.nombreTabla) + 1;
-	paquete.key = "KEY1";
-	paquete.tamanio_key = strlen(paquete.key) + 1;
-	paquete.valor = "ALGUN VALOR";
-	paquete.tamanio_valor = strlen(paquete.valor) + 1;
+	paquete.nombreTabla = "TABLA1"; // 7 bytes
+	paquete.tamanio_nombre = strlen(paquete.nombreTabla) + 1; // 4 bytes
+	paquete.key = "KEY1"; // 5 bytes
+	paquete.tamanio_key = strlen(paquete.key) + 1; // 4 bytes
+	paquete.valor = "ALGUN VALOR"; // 12 bytes
+	paquete.tamanio_valor = strlen(paquete.valor) + 1; // 4 bytes
 
 	// Lo envio
 	enviar_insert(cliente, paquete);
