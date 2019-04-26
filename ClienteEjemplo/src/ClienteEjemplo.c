@@ -32,14 +32,6 @@ struct struct_select{
 	char* key;
 };
 
-/*struct struct_insert{
-	u_int tamanio_nombre;
-	char* nombreTabla;
-	u_int tamanio_key;
-	char* key;
-	u_int tamanio_valor;
-	char* valor;
-};*/
 struct struct_insert{
 	u_int tamanio_nombre;
 	char* nombreTabla;

@@ -55,7 +55,8 @@ struct struct_select recibir_select(int cliente){
 	// Ahora recibo el nombre de la tabla
 	buffer = malloc(paquete.tamanio_nombre);
 	recv(cliente, buffer, paquete.tamanio_nombre, 0);
-	paquete.nombreTabla = (char*)buffer;
+	paquete.nombreTabla = malloc(paquete.tamanio_nombre);
+	memcpy(paquete.nombreTabla, buffer, paquete.tamanio_nombre);
 	printf("El nombre de tabla es %s\n", paquete.nombreTabla);
 	free(buffer);
 
@@ -68,7 +69,8 @@ struct struct_select recibir_select(int cliente){
 
 	buffer = malloc(paquete.tamanio_key);
 	recv(cliente, buffer, paquete.tamanio_key, 0);
-	paquete.key = (char*)buffer;
+	paquete.key = malloc(paquete.tamanio_key);
+	memcpy(paquete.key, buffer, paquete.tamanio_key);
 	printf("La key es %s\n", paquete.key);
 	free(buffer);
 
@@ -91,7 +93,8 @@ struct struct_insert recibir_insert(int cliente){
 	// Ahora recibo el nombre de la tabla
 	buffer = malloc(paquete.tamanio_nombre);
 	recv(cliente, buffer, paquete.tamanio_nombre, 0);
-	paquete.nombreTabla = (char*)buffer;
+	paquete.nombreTabla = malloc(paquete.tamanio_nombre);
+	memcpy(paquete.nombreTabla, buffer, paquete.tamanio_nombre);
 	printf("El nombre de tabla es %s\n", paquete.nombreTabla);
 	free(buffer);
 
@@ -104,7 +107,8 @@ struct struct_insert recibir_insert(int cliente){
 
 	buffer = malloc(paquete.tamanio_key);
 	recv(cliente, buffer, paquete.tamanio_key, 0);
-	paquete.key = (char*)buffer;
+	paquete.key = malloc(paquete.tamanio_key);
+	memcpy(paquete.key, buffer, paquete.tamanio_key);
 	printf("La key es %s\n", paquete.key);
 	free(buffer);
 
@@ -118,7 +122,8 @@ struct struct_insert recibir_insert(int cliente){
 
 	buffer = malloc(paquete.tamanio_valor);
 	recv(cliente, buffer, paquete.tamanio_valor, 0);
-	paquete.valor = (char*)buffer;
+	paquete.valor = malloc(paquete.tamanio_valor);
+	memcpy(paquete.valor, buffer, paquete.tamanio_valor);
 	printf("El valor es \"%s\"\n", paquete.valor);
 	free(buffer);
 
@@ -166,6 +171,8 @@ int main(void) {
 			{
 				puts("Recibi un SELECT");
 				struct struct_select paquete = recibir_select(cliente);
+
+				printf("Comando recibido: SELECT %s %s\n\n", paquete.nombreTabla, paquete.key);
 				// Depues haria lo que tenga que hacer con esta struct ya cargada
 			}
 			break;
@@ -173,6 +180,8 @@ int main(void) {
 			{
 				puts("Recibi un INSERT");
 				struct struct_insert paquete = recibir_insert(cliente);
+
+				printf("Comando recibido: INSERT %s %s %s\n\n", paquete.nombreTabla, paquete.key, paquete.valor);
 				// Depues haria lo que tenga que hacer con esta struct ya cargada
 			}
 			break;
