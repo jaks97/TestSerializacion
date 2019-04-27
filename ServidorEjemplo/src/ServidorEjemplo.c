@@ -15,30 +15,37 @@ enum operaciones{
 	JOURNAL
 };
 
-struct struct_select{
-	u_int tamanio_nombre;
+typedef struct{
+	uint16_t tamanio_nombre;
 	char* nombreTabla;
-	u_int tamanio_key;
+	uint16_t tamanio_key;
 	char* key;
-};
+}struct_select;
 
-struct struct_insert{
-	u_int tamanio_nombre;
+typedef struct{
+	uint16_t tamanio_nombre;
 	char* nombreTabla;
-	u_int tamanio_key;
+	uint16_t tamanio_key;
 	char* key;
-	u_int tamanio_valor;
+	uint16_t tamanio_valor;
 	char* valor;
-};
+}struct_insert;
 
-struct struct_select recibir_select(int cliente){
-	struct struct_select paquete;
+// Capaz es mejor no tener los tamanios en las structs y calcularos solo al enviar?
+// No se, aca pruebo esta opcion, entonces la logica de las funciones de describe es un tanto distinta a las otras.
+typedef struct{
+	char* nombreTabla;
+}struct_describe;
+
+
+struct_select recibir_select(int cliente){
+	struct_select paquete;
 	void* buffer;
 
 	// Recibo tamanio del nombre de tabla
-	buffer = malloc(sizeof(u_int));
-	recv(cliente, buffer, sizeof(u_int), 0);
-	paquete.tamanio_nombre = *((u_int*)buffer); // Casteo el puntero a void a un puntero a u_int para despues buscar el valor al que apunta
+	buffer = malloc(sizeof(uint16_t));
+	recv(cliente, buffer, sizeof(uint16_t), 0);
+	paquete.tamanio_nombre = *((uint16_t*)buffer); // Casteo el puntero a void a un puntero a uint para despues buscar el valor al que apunta
 	printf("El nombre de tabla es de %d bytes\n", paquete.tamanio_nombre);
 	free(buffer);
 
@@ -51,9 +58,9 @@ struct struct_select recibir_select(int cliente){
 	free(buffer);
 
 	// Lo mismo, pero con la key
-	buffer = malloc(sizeof(u_int));
-	recv(cliente, buffer, sizeof(u_int), 0);
-	paquete.tamanio_key = *((u_int*)buffer);
+	buffer = malloc(sizeof(uint16_t));
+	recv(cliente, buffer, sizeof(uint16_t), 0);
+	paquete.tamanio_key = *((uint16_t*)buffer);
 	printf("La key es de %d bytes\n", paquete.tamanio_key);
 	free(buffer);
 
@@ -73,14 +80,14 @@ struct struct_select recibir_select(int cliente){
 	// para controlar posibles errores y abortar la operacion.
 }
 
-struct struct_insert recibir_insert(int cliente){
-	struct struct_insert paquete;
+struct_insert recibir_insert(int cliente){
+	struct_insert paquete;
 	void* buffer = NULL;
 
 	// Recibo tamanio del nombre de tabla
 	buffer = malloc(sizeof(paquete.tamanio_nombre));
 	recv(cliente, buffer, sizeof(paquete.tamanio_nombre), 0);
-	paquete.tamanio_nombre = *((u_int*)buffer);
+	paquete.tamanio_nombre = *((uint16_t*)buffer);
 	printf("El nombre de tabla es de %d bytes\n", paquete.tamanio_nombre);
 	free(buffer);
 
@@ -93,9 +100,9 @@ struct struct_insert recibir_insert(int cliente){
 	free(buffer);
 
 	// Lo mismo, pero con la key
-	buffer = malloc(sizeof(u_int));
-	recv(cliente, buffer, sizeof(u_int), 0);
-	paquete.tamanio_key = *((u_int*)buffer);
+	buffer = malloc(sizeof(uint16_t));
+	recv(cliente, buffer, sizeof(uint16_t), 0);
+	paquete.tamanio_key = *((uint16_t*)buffer);
 	printf("La key es de %d bytes\n", paquete.tamanio_key);
 	free(buffer);
 
@@ -107,9 +114,9 @@ struct struct_insert recibir_insert(int cliente){
 	free(buffer);
 
 	// Por ultimo el valor
-	buffer = malloc(sizeof(u_int));
-	recv(cliente, buffer, sizeof(u_int), 0);
-	paquete.tamanio_valor = *((u_int*)buffer);
+	buffer = malloc(sizeof(uint16_t));
+	recv(cliente, buffer, sizeof(uint16_t), 0);
+	paquete.tamanio_valor = *((uint16_t*)buffer);
 	printf("El valor es de %d bytes\n", paquete.tamanio_valor);
 	free(buffer);
 
@@ -118,6 +125,31 @@ struct struct_insert recibir_insert(int cliente){
 	paquete.valor = malloc(paquete.tamanio_valor);
 	memcpy(paquete.valor, buffer, paquete.tamanio_valor);
 	printf("El valor es \"%s\"\n", paquete.valor);
+	free(buffer);
+
+	puts("Listo, recibi el paquete completo!\n");
+
+	return paquete;
+}
+
+struct_describe recibir_describe(int cliente){
+	struct_describe paquete;
+	void* buffer;
+	uint16_t tamanio_string; // Uso esta variable para almacenar los tamanios de los string que vaya a ir recibiendo
+
+	// Recibo tamanio del nombre de tabla
+	buffer = malloc(sizeof(uint16_t));
+	recv(cliente, buffer, sizeof(uint16_t), 0);
+	tamanio_string = *((uint16_t*)buffer); // Casteo el puntero a void a un puntero a uint para despues buscar el valor al que apunta
+	printf("El nombre de tabla es de %d bytes\n", tamanio_string);
+	free(buffer);
+
+	// Ahora recibo el nombre de la tabla
+	buffer = malloc(tamanio_string);
+	recv(cliente, buffer,tamanio_string, 0);
+	paquete.nombreTabla = malloc(tamanio_string);
+	memcpy(paquete.nombreTabla, buffer, tamanio_string);
+	printf("El nombre de tabla es %s\n", paquete.nombreTabla);
 	free(buffer);
 
 	puts("Listo, recibi el paquete completo!\n");
@@ -154,9 +186,10 @@ int main(void) {
 
 	while(1){
 		// Recibo el codigo de op
-		u_char cod_op;
-		if(!recv(cliente, &cod_op, sizeof(u_char), 0)){
-			puts("El cliente se descontecto");
+		uint8_t cod_op;
+		if(!recv(cliente, &cod_op, sizeof(uint8_t), 0)){ // Problema, recv es no bloqueante, asi que estoy en espera activa hasta
+													  	 // que se desconecte el cliente o reciba algo. Deberiamos usar select()?
+			puts("El cliente se desconecto");
 			break;
 		}
 
@@ -164,7 +197,7 @@ int main(void) {
 			case SELECT:
 			{
 				puts("Recibi un SELECT");
-				struct struct_select paquete = recibir_select(cliente);
+				struct_select paquete = recibir_select(cliente);
 
 				/*
 				 * Depues haria lo que tenga que hacer con esta struct ya cargada
@@ -179,7 +212,7 @@ int main(void) {
 			case INSERT:
 			{
 				puts("Recibi un INSERT");
-				struct struct_insert paquete = recibir_insert(cliente);
+				struct_insert paquete = recibir_insert(cliente);
 
 				/*
 				 * Depues haria lo que tenga que hacer con esta struct ya cargada
@@ -195,7 +228,19 @@ int main(void) {
 			case CREATE:
 				break;
 			case DESCRIBE:
-				break;
+			{
+				puts("Recibi un DESCRIBE");
+				struct_describe paquete = recibir_describe(cliente);
+
+				/*
+				 * Depues haria lo que tenga que hacer con esta struct ya cargada
+				 */
+				printf("Comando recibido: DESCRIBE %s\n\n", paquete.nombreTabla);
+
+				// Por ultimo, y sabiendo que no voy a usar mas el paquete, libero la memoria dinamica (MUCHO MUY IMPORTANTE)
+				free(paquete.nombreTabla);
+			}
+			break;
 			case DROP:
 				break;
 			case JOURNAL:
@@ -204,6 +249,8 @@ int main(void) {
 				puts("Recibi una operacion invalida...");
 		}
 	}
+	close(cliente); // No me olvido de cerrar el socket que ya no voy a usar mas
+	close(servidor); // No me olvido de cerrar el socket que ya no voy a usar mas
 
 	return EXIT_SUCCESS;
 }
