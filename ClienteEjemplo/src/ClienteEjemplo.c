@@ -1,13 +1,3 @@
-/*
- ============================================================================
- Name        : ClienteEjemplo.c
- Author      : 
- Version     :
- Copyright   : Your copyright notice
- Description : Hello World in C, Ansi-style
- ============================================================================
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -43,7 +33,7 @@ struct struct_insert{
 
 void enviar_select(int cliente, struct struct_select paquete){
 	// Primero envio codigo de operacion
-	u_char cod_op = SELECT;
+	static u_char cod_op = SELECT;
 	send(cliente, &cod_op, sizeof(u_char), 0);
 
 	// Luego los datos
@@ -71,7 +61,7 @@ void enviar_select(int cliente, struct struct_select paquete){
 
 void enviar_insert(int cliente, struct struct_insert paquete){
 	// Primero envio codigo de operacion
-	u_char cod_op = INSERT;
+	static u_char cod_op = INSERT;
 	send(cliente, &cod_op, sizeof(u_char), 0);
 
 	// Luego los datos
@@ -113,7 +103,7 @@ int main(void) {
 
 	int cliente = socket(AF_INET, SOCK_STREAM, 0);
 	puts("Conectando con servidor (FS)");
-	if (connect(cliente, &direccionServidor, sizeof(direccionServidor))) {
+	if (connect(cliente, (void*) &direccionServidor, sizeof(direccionServidor))) {
 		puts("No se pudo conectar con el servidor (FS)");
 		exit(EXIT_FAILURE); // No seria la manera mas prolija de atender esto
 	}
@@ -128,8 +118,9 @@ int main(void) {
 	paquete.tamanio_valor = strlen(paquete.valor) + 1; // 4 bytes
 
 	// Lo envio
+	puts("Enviando INSERT");
 	enviar_insert(cliente, paquete);
-
+	// En este caso uso todos string literals, asi que no uso memoria dinamica. Pero si lo hiciese, hay que liberarla
 
 	// Armo un SELECT TABLA1 KEY1
 	struct struct_select paquete2;
@@ -139,9 +130,10 @@ int main(void) {
 	paquete2.tamanio_key = strlen(paquete2.key) + 1;
 
 	// Lo envio
+	puts("Enviando SELECT");
 	enviar_select(cliente, paquete2);
+	// En este caso uso todos string literals, asi que no uso memoria dinamica. Pero si lo hiciese, hay que liberarla
 
-
-
+	puts("Termine");
 	return EXIT_SUCCESS;
 }
