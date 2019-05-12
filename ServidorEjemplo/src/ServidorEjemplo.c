@@ -18,15 +18,13 @@ enum operaciones{
 typedef struct{
 	uint16_t tamanio_nombre;
 	char* nombreTabla;
-	uint16_t tamanio_key;
-	char* key;
+	uint16_t key;
 }struct_select;
 
 typedef struct{
 	uint16_t tamanio_nombre;
 	char* nombreTabla;
-	uint16_t tamanio_key;
-	char* key;
+	uint16_t key;
 	uint16_t tamanio_valor;
 	char* valor;
 }struct_insert;
@@ -57,18 +55,11 @@ struct_select recibir_select(int cliente){
 	printf("El nombre de tabla es %s\n", paquete.nombreTabla);
 	free(buffer);
 
-	// Lo mismo, pero con la key
-	buffer = malloc(sizeof(uint16_t));
-	recv(cliente, buffer, sizeof(uint16_t), 0);
-	paquete.tamanio_key = *((uint16_t*)buffer);
-	printf("La key es de %d bytes\n", paquete.tamanio_key);
-	free(buffer);
-
-	buffer = malloc(paquete.tamanio_key);
-	recv(cliente, buffer, paquete.tamanio_key, 0);
-	paquete.key = malloc(paquete.tamanio_key);
-	memcpy(paquete.key, buffer, paquete.tamanio_key);
-	printf("La key es %s\n", paquete.key);
+	// Ahora recibo la key
+	buffer = malloc(sizeof(paquete.key));
+	recv(cliente, buffer, sizeof(paquete.key), 0);
+	paquete.key = *((uint16_t*)buffer); // Casteo el puntero a void a un puntero a uint para despues buscar el valor al que apunta
+	printf("La key es %d\n", paquete.key);
 	free(buffer);
 
 	puts("Listo, recibi el paquete completo!\n");
@@ -99,18 +90,11 @@ struct_insert recibir_insert(int cliente){
 	printf("El nombre de tabla es %s\n", paquete.nombreTabla);
 	free(buffer);
 
-	// Lo mismo, pero con la key
-	buffer = malloc(sizeof(uint16_t));
+	// Ahora recibo la key
+	buffer = malloc(sizeof(paquete.key));
 	recv(cliente, buffer, sizeof(uint16_t), 0);
-	paquete.tamanio_key = *((uint16_t*)buffer);
-	printf("La key es de %d bytes\n", paquete.tamanio_key);
-	free(buffer);
-
-	buffer = malloc(paquete.tamanio_key);
-	recv(cliente, buffer, paquete.tamanio_key, 0);
-	paquete.key = malloc(paquete.tamanio_key);
-	memcpy(paquete.key, buffer, paquete.tamanio_key);
-	printf("La key es %s\n", paquete.key);
+	paquete.key = *((uint16_t*)buffer); // Casteo el puntero a void a un puntero a uint para despues buscar el valor al que apunta
+	printf("La key es %d\n", paquete.key);
 	free(buffer);
 
 	// Por ultimo el valor
@@ -202,11 +186,10 @@ int main(void) {
 				/*
 				 * Depues haria lo que tenga que hacer con esta struct ya cargada
 				 */
-				printf("Comando recibido: SELECT %s %s\n\n", paquete.nombreTabla, paquete.key);
+				printf("Comando recibido: SELECT %s %d\n\n", paquete.nombreTabla, paquete.key);
 
 				// Por ultimo, y sabiendo que no voy a usar mas el paquete, libero la memoria dinamica (MUCHO MUY IMPORTANTE)
 				free(paquete.nombreTabla);
-				free(paquete.key);
 			}
 			break;
 			case INSERT:
@@ -217,11 +200,10 @@ int main(void) {
 				/*
 				 * Depues haria lo que tenga que hacer con esta struct ya cargada
 				 */
-				printf("Comando recibido: INSERT %s %s \"%s\"\n\n", paquete.nombreTabla, paquete.key, paquete.valor);
+				printf("Comando recibido: INSERT %s %d \"%s\"\n\n", paquete.nombreTabla, paquete.key, paquete.valor);
 
 				// Por ultimo, y sabiendo que no voy a usar mas el paquete, libero la memoria dinamica (MUCHO MUY IMPORTANTE)
 				free(paquete.nombreTabla);
-				free(paquete.key);
 				free(paquete.valor);
 			}
 			break;

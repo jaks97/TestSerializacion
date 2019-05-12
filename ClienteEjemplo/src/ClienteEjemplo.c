@@ -18,15 +18,13 @@ enum operaciones{
 typedef struct{
 	uint16_t tamanio_nombre;
 	char* nombreTabla;
-	uint16_t tamanio_key;
-	char* key;
+	uint16_t key;
 }struct_select;
 
 typedef struct{
 	uint16_t tamanio_nombre;
 	char* nombreTabla;
-	uint16_t tamanio_key;
-	char* key;
+	uint16_t key;
 	uint16_t tamanio_valor;
 	char* valor;
 }struct_insert;
@@ -41,7 +39,7 @@ void enviar_select(int cliente, struct_select paquete){
 	const uint8_t cod_op = SELECT;
 
 	// Armo paquete con los datos
-	size_t tamanio_paquete = sizeof(cod_op) + sizeof(uint16_t)*2 + paquete.tamanio_key + paquete.tamanio_nombre; // Calculo el tamanio del paquete
+	size_t tamanio_paquete = sizeof(cod_op) + sizeof(uint16_t) + sizeof(paquete.key) + paquete.tamanio_nombre; // Calculo el tamanio del paquete
 	void* buffer = malloc(tamanio_paquete); // Pido memoria para el tamanio del paquete completo que voy a enviar
 
 	int desplazamiento = 0; // Voy a usar esta variable para ir moviendome por el buffer
@@ -57,9 +55,7 @@ void enviar_select(int cliente, struct_select paquete){
 	desplazamiento += paquete.tamanio_nombre; // Me corro la longitud del string
 
 	// Lo mismo para la clave
-	memcpy(buffer + desplazamiento, &paquete.tamanio_key, sizeof(paquete.tamanio_key));
-	desplazamiento += sizeof(paquete.tamanio_key);
-	memcpy(buffer + desplazamiento, paquete.key, paquete.tamanio_key);
+	memcpy(buffer + desplazamiento, &paquete.key, sizeof(paquete.key));
 	// Al pedo calcular el desplazamiento ahora, no voy a enviar mas nada y ademas ya me ocupe todo el buffer
 
 	// Por ultimo envio el paquete y libero el buffer.
@@ -71,7 +67,7 @@ void enviar_insert(int cliente, struct_insert paquete){
 	const uint8_t cod_op = INSERT;
 
 	// Armo paquete con los datos
-	size_t tamanio_paquete = sizeof(cod_op) + sizeof(uint16_t)*3 + paquete.tamanio_key + paquete.tamanio_nombre + paquete.tamanio_valor; // Calculo el tamanio del paquete
+	size_t tamanio_paquete = sizeof(cod_op) + sizeof(uint16_t)*2 + sizeof(paquete.key) + paquete.tamanio_nombre + paquete.tamanio_valor; // Calculo el tamanio del paquete
 	void* buffer = malloc(tamanio_paquete); // Pido memoria para el tamanio del paquete completo que voy a enviar
 
 	int desplazamiento = 0; // Voy a usar esta variable para ir moviendome por el buffer
@@ -87,10 +83,8 @@ void enviar_insert(int cliente, struct_insert paquete){
 	desplazamiento += paquete.tamanio_nombre; // Me corro la longitud del string
 
 	// Lo mismo para la clave
-	memcpy(buffer + desplazamiento, &paquete.tamanio_key, sizeof(paquete.tamanio_key));
-	desplazamiento += sizeof(paquete.tamanio_key);
-	memcpy(buffer + desplazamiento, paquete.key, paquete.tamanio_key);
-	desplazamiento += paquete.tamanio_key;
+	memcpy(buffer + desplazamiento, &paquete.key, sizeof(paquete.key));
+	desplazamiento += sizeof(paquete.key);
 
 	// Lo mismo para el valor
 	memcpy(buffer + desplazamiento, &paquete.tamanio_valor, sizeof(paquete.tamanio_valor));
@@ -148,8 +142,7 @@ int main(void) {
 	struct_insert paquete;
 	paquete.nombreTabla = "TABLA1"; // 7 bytes
 	paquete.tamanio_nombre = strlen(paquete.nombreTabla) + 1; // 2 bytes
-	paquete.key = "KEY1"; // 5 bytes
-	paquete.tamanio_key = strlen(paquete.key) + 1; // 2 bytes
+	paquete.key = 1; // 2 bytes
 	paquete.valor = "ALGUN VALOR"; // 12 bytes
 	paquete.tamanio_valor = strlen(paquete.valor) + 1; // 2 bytes
 
@@ -162,8 +155,7 @@ int main(void) {
 	struct_select paquete2;
 	paquete2.nombreTabla = "TABLA1";
 	paquete2.tamanio_nombre = strlen(paquete2.nombreTabla) + 1;
-	paquete2.key = "KEY1";
-	paquete2.tamanio_key = strlen(paquete2.key) + 1;
+	paquete2.key = 1;
 
 	// Lo envio
 	puts("Enviando SELECT");
