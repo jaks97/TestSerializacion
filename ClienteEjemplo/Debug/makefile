@@ -25,11 +25,14 @@ endif
 # All Target
 all: ClienteEjemplo
 
+dependents:
+	-cd /home/utnso/workspace/serializacion/Debug && $(MAKE) clean all
+
 # Tool invocations
-ClienteEjemplo: $(OBJS) $(USER_OBJS)
+ClienteEjemplo: $(OBJS) $(USER_OBJS) /home/utnso/workspace/serializacion/Debug/libserializacion.so
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross GCC Linker'
-	gcc  -o "ClienteEjemplo" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -L"/home/utnso/workspace/serializacion/Debug" -o "ClienteEjemplo" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -39,5 +42,6 @@ clean:
 	-@echo ' '
 
 .PHONY: all clean dependents
+/home/utnso/workspace/serializacion/Debug/libserializacion.so:
 
 -include ../makefile.targets

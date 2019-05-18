@@ -5,123 +5,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <arpa/inet.h>
-
-enum operaciones{
-	SELECT = 1,
-	INSERT,
-	CREATE,
-	DESCRIBE,
-	DROP,
-	JOURNAL
-};
-
-typedef struct{
-	uint16_t tamanio_nombre;
-	char* nombreTabla;
-	uint16_t key;
-}struct_select;
-
-typedef struct{
-	uint16_t tamanio_nombre;
-	char* nombreTabla;
-	uint16_t key;
-	uint16_t tamanio_valor;
-	char* valor;
-}struct_insert;
-
-// Capaz es mejor no tener los tamanios en las structs y calcularos solo al enviar?
-// No se, aca pruebo esta opcion, entonces la logica de las funciones de describe es un tanto distinta a las otras.
-typedef struct{
-	char* nombreTabla;
-}struct_describe;
-
-void enviar_select(int cliente, struct_select paquete){
-	const uint8_t cod_op = SELECT;
-
-	// Armo paquete con los datos
-	size_t tamanio_paquete = sizeof(cod_op) + sizeof(uint16_t) + sizeof(paquete.key) + paquete.tamanio_nombre; // Calculo el tamanio del paquete
-	void* buffer = malloc(tamanio_paquete); // Pido memoria para el tamanio del paquete completo que voy a enviar
-
-	int desplazamiento = 0; // Voy a usar esta variable para ir moviendome por el buffer
-
-	// Primero codigo de operacion
-	memcpy(buffer, &cod_op, sizeof(cod_op)); // En el comienzo del buffer copio el codigo de operacion
-	desplazamiento += sizeof(cod_op); // Me corro 1 byte del uint8_t
-
-	// Ahora el nombre de la tabla
-	memcpy(buffer + desplazamiento, &paquete.tamanio_nombre, sizeof(paquete.tamanio_nombre)); // En el comienzo del buffer copio el tamanio del nombre de la tabla
-	desplazamiento += sizeof(paquete.tamanio_nombre); // Me corro 2 bytes del uint16
-	memcpy(buffer + desplazamiento, paquete.nombreTabla, paquete.tamanio_nombre); // En la nueva posicion copio el nombre de la tabla
-	desplazamiento += paquete.tamanio_nombre; // Me corro la longitud del string
-
-	// Lo mismo para la clave
-	memcpy(buffer + desplazamiento, &paquete.key, sizeof(paquete.key));
-	// Al pedo calcular el desplazamiento ahora, no voy a enviar mas nada y ademas ya me ocupe todo el buffer
-
-	// Por ultimo envio el paquete y libero el buffer.
-	send(cliente, buffer, tamanio_paquete, 0); // Hago un solo send para todo, asi nos aseguramos que el paquete llega en orden
-	free(buffer);
-}
-
-void enviar_insert(int cliente, struct_insert paquete){
-	const uint8_t cod_op = INSERT;
-
-	// Armo paquete con los datos
-	size_t tamanio_paquete = sizeof(cod_op) + sizeof(uint16_t)*2 + sizeof(paquete.key) + paquete.tamanio_nombre + paquete.tamanio_valor; // Calculo el tamanio del paquete
-	void* buffer = malloc(tamanio_paquete); // Pido memoria para el tamanio del paquete completo que voy a enviar
-
-	int desplazamiento = 0; // Voy a usar esta variable para ir moviendome por el buffer
-
-	// Primero codigo de operacion
-	memcpy(buffer, &cod_op, sizeof(cod_op)); // En el comienzo del buffer copio el codigo de operacion
-	desplazamiento += sizeof(cod_op); // Me corro 1 byte del uint8_t
-
-	// Ahora el nombre de la tabla
-	memcpy(buffer + desplazamiento, &paquete.tamanio_nombre, sizeof(paquete.tamanio_nombre)); // En el comienzo del buffer copio el tamanio del nombre de la tabla
-	desplazamiento += sizeof(paquete.tamanio_nombre); // Me corro 2 bytes del uint16
-	memcpy(buffer + desplazamiento, paquete.nombreTabla, paquete.tamanio_nombre); // En la nueva posicion copio el nombre de la tabla
-	desplazamiento += paquete.tamanio_nombre; // Me corro la longitud del string
-
-	// Lo mismo para la clave
-	memcpy(buffer + desplazamiento, &paquete.key, sizeof(paquete.key));
-	desplazamiento += sizeof(paquete.key);
-
-	// Lo mismo para el valor
-	memcpy(buffer + desplazamiento, &paquete.tamanio_valor, sizeof(paquete.tamanio_valor));
-	desplazamiento += sizeof(paquete.tamanio_valor);
-	memcpy(buffer + desplazamiento, paquete.valor, paquete.tamanio_valor);
-	// Al pedo calcular el desplazamiento ahora, no voy a enviar mas nada y ademas ya me ocupe todo el buffer
-
-	// Por ultimo envio el paquete y libero el buffer.
-	send(cliente, buffer, tamanio_paquete, 0); // Hago un solo send para todo, asi nos aseguramos que el paquete llega en orden
-	free(buffer);
-}
-
-void enviar_describe(int cliente, struct_describe paquete){
-	const uint8_t cod_op = DESCRIBE;
-
-	uint16_t tamanio_nombre = strlen(paquete.nombreTabla)+1; // Calculo el tamanio del nombre
-
-	// Armo paquete con los datos
-	size_t tamanio_paquete = sizeof(cod_op) + sizeof(uint16_t) + tamanio_nombre; // Calculo el tamanio del paquete
-	void* buffer = malloc(tamanio_paquete); // Pido memoria para el tamanio del paquete completo que voy a enviar
-
-	int desplazamiento = 0; // Voy a usar esta variable para ir moviendome por el buffer
-
-	// Primero codigo de operacion
-	memcpy(buffer, &cod_op, sizeof(cod_op)); // En el comienzo del buffer copio el codigo de operacion
-	desplazamiento += sizeof(cod_op); // Me corro 1 byte del uint8_t
-
-	// Ahora el nombre de la tabla
-	memcpy(buffer + desplazamiento, &tamanio_nombre, sizeof(tamanio_nombre)); // En el comienzo del buffer copio el tamanio del nombre de la tabla
-	desplazamiento += sizeof(tamanio_nombre); // Me corro 2 bytes del uint16
-	memcpy(buffer + desplazamiento, paquete.nombreTabla, tamanio_nombre); // En la nueva posicion copio el nombre de la tabla
-	// Al pedo calcular el desplazamiento ahora, no voy a enviar mas nada y ademas ya me ocupe todo el buffer
-
-	// Por ultimo envio el paquete y libero el buffer.
-	send(cliente, buffer, tamanio_paquete, 0); // Hago un solo send para todo, asi nos aseguramos que el paquete llega en orden
-	free(buffer);
-}
+#include "serializacion.h"
 
 int main(void) {
 	puts("Iniciando cliente");
@@ -141,20 +25,18 @@ int main(void) {
 	// Armo un INSERT TABLA1 KEY1 "ALGUN VALOR"
 	struct_insert paquete;
 	paquete.nombreTabla = "TABLA1"; // 7 bytes
-	paquete.tamanio_nombre = strlen(paquete.nombreTabla) + 1; // 2 bytes
 	paquete.key = 1; // 2 bytes
 	paquete.valor = "ALGUN VALOR"; // 12 bytes
-	paquete.tamanio_valor = strlen(paquete.valor) + 1; // 2 bytes
+	paquete.timestamp = 1558109385595; // No es necesario si no enviamos timestamp
 
 	// Lo envio
 	puts("Enviando INSERT");
-	enviar_insert(cliente, paquete);
+	enviar_insert_ts(cliente, paquete); // Usar enviar_insert si no hace falta el timestamp (Kernel)
 	// En este caso uso todos string literals, asi que no uso memoria dinamica. Pero si lo hiciese, hay que liberarla
 
 	// Armo un SELECT TABLA1 KEY1
 	struct_select paquete2;
 	paquete2.nombreTabla = "TABLA1";
-	paquete2.tamanio_nombre = strlen(paquete2.nombreTabla) + 1;
 	paquete2.key = 1;
 
 	// Lo envio
@@ -162,14 +44,40 @@ int main(void) {
 	enviar_select(cliente, paquete2);
 	// En este caso uso todos string literals, asi que no uso memoria dinamica. Pero si lo hiciese, hay que liberarla
 
-	// Armo un DESCRIBE TABLA1 (con logica ligeramente distinta)
-	struct_describe paquete3;
+	// Armo un CREATE SC 4
+	struct_create paquete3;
 	paquete3.nombreTabla = "TABLA1";
+	paquete3.consistencia = SC;
+	paquete3.particiones = 4;
+	paquete3.tiempoCompactacion = 60000;
+
+	// Lo envio
+	puts("Enviando CREATE");
+	enviar_create(cliente, paquete3);
+	// En este caso uso todos string literals, asi que no uso memoria dinamica. Pero si lo hiciese, hay que liberarla
+
+
+	// Armo un DESCRIBE TABLA1
+	struct_describe paquete4;
+	paquete4.nombreTabla = "TABLA1";
 
 	// Lo envio
 	puts("Enviando DESCRIBE");
-	enviar_describe(cliente, paquete3);
+	enviar_describe(cliente, paquete4);
 	// En este caso uso todos string literals, asi que no uso memoria dinamica. Pero si lo hiciese, hay que liberarla
+
+	// Armo un DROP TABLA1
+	struct_drop paquete5;
+	paquete5.nombreTabla = "TABLA1";
+
+	// Lo envio
+	puts("Enviando DROP");
+	enviar_drop(cliente, paquete5);
+	// En este caso uso todos string literals, asi que no uso memoria dinamica. Pero si lo hiciese, hay que liberarla
+
+	// Por ultimo envio un JOURNAL
+	puts("Enviando JOURNAL");
+	enviar_journal(cliente);
 
 	puts("Termine");
 	close(cliente); // No me olvido de cerrar el socket que ya no voy a usar
